@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:developer';
 
+import 'package:flutter/services.dart';
+
 class LoginPage extends StatefulWidget {
   @override
   _LoginPageState createState() => _LoginPageState();
@@ -13,26 +15,48 @@ class _LoginPageState extends State<LoginPage> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   String _email, _password;
 
+  @override
+  void initState() {
+    super.initState();
+    this.checkAuth();
+  }
+
+  checkAuth() async {
+    _auth.authStateChanges().listen((user) {
+      if (user == null) {
+        debugPrint("user is currently signout");
+      } else {
+        debugPrint("User is logged in");
+        debugPrint("Navigate to Home Page");
+        this.navigateToHomePage();
+      }
+    });
+  }
+
   Future<void> signin() async {
     if (_formKey.currentState.validate()) {
       _formKey.currentState.save();
       try {
+        debugPrint("Email $_email, password $_password");
         UserCredential userCredential = await FirebaseAuth.instance
             .signInWithEmailAndPassword(email: _email, password: _password);
-        log("Success login");
-        Navigator.pushReplacementNamed(context, "/home_page");
+        debugPrint("Success login");
+        debugPrint("User credential : $userCredential");
+
+        this.navigateToHomePage();
       } on FirebaseAuthException catch (e) {
         String errorMsg;
         if (e.code == 'user-not-found') {
           errorMsg = 'No user found for that email.';
-          log(errorMsg);
+          debugPrint(errorMsg);
           this.showError(errorMsg);
         } else if (e.code == 'wrong-password') {
           errorMsg = 'Wrong password provided for that user.';
-          log(errorMsg);
+          debugPrint(errorMsg);
+          this.showError(errorMsg);
         }
       } catch (e) {
-        this.showError(e.essage);
+        this.showError(e.message);
       }
     }
   }
@@ -40,17 +64,34 @@ class _LoginPageState extends State<LoginPage> {
   showError(String msg) {
     showDialog(
       context: context,
-      barrierDismissible: true,
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Error"),
-          content: Text(msg),
+          title: Text(
+            "Error",
+            style: TextStyle(
+              color: Colors.red,
+              fontSize: 18.0,
+            ),
+          ),
+          content: Text(
+            msg,
+            style: TextStyle(
+              fontSize: 20.0,
+            ),
+          ),
           actions: [
             FlatButton(
               onPressed: () {
                 Navigator.pop(context);
               },
-              child: Text("Ok"),
+              child: Text(
+                "Ok",
+                style: TextStyle(
+                  fontSize: 22.0,
+                  color: Colors.green,
+                ),
+              ),
             ),
           ],
         );
@@ -77,7 +118,7 @@ class _LoginPageState extends State<LoginPage> {
                   fontSize: 30.0,
                   letterSpacing: 1.1,
                   fontWeight: FontWeight.bold,
-                  color: Colors.lightBlueAccent,
+                  color: Colors.green,
                 ),
               ),
             ),
@@ -89,7 +130,8 @@ class _LoginPageState extends State<LoginPage> {
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: TextFormField(
-                        onSaved: (value) => _email = value.trim(),
+                        onSaved: (value) =>
+                            _email = value.trim().replaceAll(' ', ''),
                         autofocus: false,
                         validator: (input) {
                           if (input.trim().isEmpty) {
@@ -98,7 +140,6 @@ class _LoginPageState extends State<LoginPage> {
                         },
                         style: TextStyle(
                           fontSize: 20.0,
-                          color: Colors.blue,
                         ),
                         decoration: InputDecoration(
                           labelText: 'Email',
@@ -123,7 +164,6 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         style: TextStyle(
                           fontSize: 20.0,
-                          color: Colors.blue,
                         ),
                       ),
                     ),
@@ -137,7 +177,7 @@ class _LoginPageState extends State<LoginPage> {
                 onPressed: () {
                   this.signin();
                 },
-                color: Colors.lightBlueAccent,
+                color: Colors.greenAccent,
                 padding: EdgeInsets.symmetric(vertical: 13.0, horizontal: 30.0),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(
@@ -166,7 +206,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   GestureDetector(
                     onTap: () {
-                      print("go to signup screen");
                       this.navigateToSignupPage();
                     },
                     child: Text(
@@ -188,5 +227,9 @@ class _LoginPageState extends State<LoginPage> {
 
   navigateToSignupPage() {
     Navigator.pushReplacementNamed(context, "/signup_page");
+  }
+
+  navigateToHomePage() {
+    Navigator.pushReplacementNamed(context, "/home_page");
   }
 }
